@@ -1,0 +1,71 @@
+FROM fedora:36
+
+MAINTAINER Jack Nowacek <jackson.d.nowacek@gmail.com>
+
+RUN dnf -y update && dnf clean all
+
+RUN dnf -y install dnf-utils
+
+RUN dnf builddep -y R
+
+RUN dnf install -y \
+	git-all \
+	R-core \
+	R-core-devel \
+	bzip2 \
+	atlas-devel \
+	java-11-openjdk-devel \
+	openssl-devel \
+	libcurl-devel \
+	libxml2-devel \
+	udunits2-devel \	
+	cairo-devel \
+	readline-devel \
+	gdal-devel \
+	proj-devel \
+	geos-devel \
+	sqlite-devel \
+	qpdf-devel \
+	rsync
+
+## Copy Rdevel
+COPY R-devel.tar.gz bdr-config.site /tmp
+RUN cd /tmp && tar -xzf R-devel.tar.gz
+
+## Append config.site
+RUN cat /tmp/bdr-config.site >> /tmp/R-devel/config.site
+
+## Build and install according the standard 'recipe' old recipe...
+RUN cd /tmp/R-devel \
+&& ./tools/rsync-recommended \
+       R_PAPERSIZE=letter \
+       R_BATCHSAVE="--no-save --no-restore" \
+       R_BROWSER=xdg-open \
+       PAGER=/usr/bin/pager \
+       PERL=/usr/bin/perl \
+       R_UNZIPCMD=/usr/bin/unzip \
+       R_ZIPCMD=/usr/bin/zip \
+       R_PRINTCMD=/usr/bin/lpr \
+       LIBnn=lib \
+       AWK=/usr/bin/awk \
+       ./configure --enable-R-shlib \
+       --without-blas \
+       --without-lapack \
+       --with-readline \
+       --program-suffix=devel \
+       --enable-lto 
+#&&   make \
+#&&   sudo make install
+
+## Rename development version of R
+#RUN cd /usr/local/bin \
+#    && mv R Rdevel \
+#    && mv Rscript Rscriptdevel \
+#    && ln -s Rdevel RD \
+#    && ln -s Rscriptdevel RDscript
+
+## Set CRAN repo prefs
+##RUN echo 'options(repos = c(CRAN = "https://cloud.r-project.org"))' >> ~/.Rprofile
+
+## Install devtools
+##RUN RDscript -e 'install.packages("devtools")'
